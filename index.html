@@ -22,7 +22,7 @@
       box-shadow:1px 1px 5px rgba(0,0,0,0.3);
     }
 
-    /* 화면 구분 */
+    /* 모든 화면(스크린) 기본 설정 */
     .screen {
       position:absolute; top:0; left:0;
       width:100%; height:100%;
@@ -35,8 +35,9 @@
       flex-direction:column;
       justify-content:center;
       align-items:center;
-      background: url('intro.png') center center no-repeat;
-      background-size: contain; /* 세로 전체 보이게 */
+      /* 세로 이미지가 잘 보이도록 높이에 맞춰 늘리기 */
+      background: url('intro.png') no-repeat center top;
+      background-size: auto 100%;
     }
     #introScreen .btn-group {
       display:flex;
@@ -103,10 +104,11 @@
     </ul>
     <h2>아이템 설명</h2>
     <ul>
-      <li><strong>철창(prison)</strong>: 포획한 좀비를 감옥에 가둡니다.</li>
-      <li><strong>밧줄(rope)</strong>: 충돌 시 밧줄 1개 소모, 즉시 포획.</li>
-      <li><strong>나노옷(nano)</strong>: 충돌 시 나노옷 1개 소모, 3초간 무적.</li>
-      <li><strong>채취면봉(swab)</strong>: 감옥 속 좀비가 있을 때 사용 → 점수+1.</li>
+      <!-- 순서를 로프 → 감옥 으로 교체 -->
+      <li><strong>밧줄(rope)</strong>: 충돌 시 밧줄 1개 소모, 즉시 포획</li>
+      <li><strong>철창(prison)</strong>: 포획한 좀비를 감옥에 가둡니다</li>
+      <li><strong>나노옷(nano)</strong>: 충돌 시 나노옷 1개 소모, 3초간 무적</li>
+      <li><strong>채취면봉(swab)</strong>: 감옥 속 좀비가 있을 때 사용 → 점수+1</li>
     </ul>
   </div>
 
@@ -119,23 +121,20 @@
   <script>
   (()=>{
 
-    // 화면 전환
+    // --- 화면 전환 헬퍼 ---
     const show = id => {
       document.querySelectorAll('.screen').forEach(s=>s.style.display='none');
-      const el = document.getElementById(id);
-      el.style.display = (id==='gameScreen' ? 'flex' : 'flex');
-      // 게임화면은 flex-column; infoScreen도 flex
+      document.getElementById(id).style.display = 'flex';
     };
 
-    // 모바일 검사
+    // 모바일 여부 체크
     const isMobile = () => /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
 
-    // 버튼
+    // 버튼 이벤트 연결
     document.getElementById('btnStart').onclick = ()=>{
-      // 모바일 & 세로 모드일 땐 가로 전환 요구
+      // 모바일 세로 모드에서는 가로 전환 안내
       if(isMobile() && window.innerWidth < window.innerHeight){
-        alert('모바일에서는 가로 모드로 전환 후 게임이 시작됩니다.');
-        // 화면 회전 이벤트 대기
+        alert('모바일에서는 가로 모드로 전환 후 게임을 시작합니다.');
         window.addEventListener('orientationchange', function onrot(){
           if(window.innerWidth > window.innerHeight){
             window.removeEventListener('orientationchange', onrot);
@@ -148,18 +147,18 @@
         startGame();
       }
     };
-    document.getElementById('btnInfo').onclick  = ()=> show('infoScreen');
-    document.getElementById('btnBack').onclick  = ()=> show('introScreen');
+    document.getElementById('btnInfo').onclick = ()=> show('infoScreen');
+    document.getElementById('btnBack').onclick = ()=> show('introScreen');
 
+    // 최초엔 인트로 보여주기
     show('introScreen');
 
     // —————————————————————————————
-    // 게임 로직 (기존 startGame 포함)
+    //         여기서부터 게임 로직
     // —————————————————————————————
 
-    // 캔버스 & 리사이즈
-    const canvas = document.getElementById('gameCanvas');
-    const ctx    = canvas.getContext('2d');
+    const canvas = document.getElementById('gameCanvas'),
+          ctx    = canvas.getContext('2d');
     let WIDTH, HEIGHT;
     function resize(){
       WIDTH  = canvas.width  = window.innerWidth;
@@ -169,43 +168,49 @@
     resize();
 
     const FPS = 60;
-    // 입력
-    const keys = {}, pointer = {down:false,x:0,y:0};
+    // 입력 처리: 키보드 + 마우스/터치
+    const keys = {}, ptr = {down:false,x:0,y:0};
     window.addEventListener('keydown', e=> keys[e.key]=true);
     window.addEventListener('keyup',   e=> keys[e.key]=false);
-    canvas.addEventListener('mousedown',e=>{pointer.down=true; upd(e);});
-    canvas.addEventListener('mousemove',e=>{ if(pointer.down) upd(e); });
-    window.addEventListener('mouseup', ()=> pointer.down=false);
-    canvas.addEventListener('touchstart',e=>{pointer.down=true; upd(e.touches[0]);});
-    canvas.addEventListener('touchmove', e=>{upd(e.touches[0]);});
-    canvas.addEventListener('touchend', ()=> pointer.down=false);
-    function upd(e){ pointer.x=e.clientX; pointer.y=e.clientY; }
+
+    canvas.addEventListener('mousedown',e=>{ ptr.down=true; upd(e); });
+    canvas.addEventListener('mousemove',e=>{ if(ptr.down) upd(e); });
+    window.addEventListener('mouseup', ()=> ptr.down=false);
+
+    canvas.addEventListener('touchstart',e=>{ ptr.down=true; upd(e.touches[0]); });
+    canvas.addEventListener('touchmove', e=> upd(e.touches[0]));
+    canvas.addEventListener('touchend',  ()=> ptr.down=false);
+
+    function upd(e){ ptr.x=e.clientX; ptr.y=e.clientY; }
 
     function isColliding(a,b){
       return !(a.x+a.size < b.x ||
-               a.x > b.x+b.size ||
+               a.x     > b.x+b.size ||
                a.y+a.size < b.y ||
-               a.y > b.y+b.size);
+               a.y     > b.y+b.size);
     }
 
     // 이미지 로드
-    const assets = {}, list={
+    const list = {
       bg:'bg.png', player:'player.png', zombie:'zombie.png',
       rope:'rope.png', prison:'prison.png', swab:'swab.png', nano:'nano.png'
     };
+    const assets = {};
     let ld=0, tot=Object.keys(list).length;
     for(let k in list){
-      assets[k]=new Image();
-      assets[k].src=list[k];
-      assets[k].onload = ()=>{ if(++ld===tot) {/*준비*/} }
+      assets[k] = new Image();
+      assets[k].src = list[k];
+      assets[k].onload = ()=>{ if(++ld===tot) {/* 준비 완료 */} };
     }
 
-    const SPR={player:60,zombie:50,item:36};
+    // 크기 설정
+    const SPR = { player:60, zombie:50, item:36 };
 
-    class Player{
+    // === Player ===
+    class Player {
       constructor(){
-        this.size=SPR.player;
-        this.x=WIDTH/2; this.y=HEIGHT/2;
+        this.size = SPR.player;
+        this.x = WIDTH/2; this.y = HEIGHT/2;
         this.speed=4; this.health=2;
         this.ropeCount=0; this.nanoCount=0;
         this.captured=0; this.imprisoned=0; this.score=0;
@@ -216,8 +221,8 @@
         if(keys['ArrowRight']||keys['d']) this.x+=this.speed;
         if(keys['ArrowUp']||keys['w']) this.y-=this.speed;
         if(keys['ArrowDown']||keys['s']) this.y+=this.speed;
-        if(pointer.down){
-          const dx=pointer.x-this.x, dy=pointer.y-this.y;
+        if(ptr.down){
+          const dx=ptr.x-this.x, dy=ptr.y-this.y;
           const d=Math.hypot(dx,dy)||1;
           this.x+=dx/d*this.speed; this.y+=dy/d*this.speed;
         }
@@ -231,7 +236,8 @@
       }
     }
 
-    class Zombie{
+    // === Zombie ===
+    class Zombie {
       constructor(){ this.size=SPR.zombie; this.speed=1.2; this.reset(); }
       reset(){
         this.x=Math.random()*(WIDTH-this.size);
@@ -244,7 +250,8 @@
       draw(){ ctx.drawImage(assets.zombie,this.x,this.y,this.size,this.size) }
     }
 
-    class Item{
+    // === Item ===
+    class Item {
       constructor(t){ this.type=t; this.size=SPR.item; this.reset(); }
       reset(){
         this.x=Math.random()*(WIDTH-this.size);
@@ -253,16 +260,23 @@
       draw(){ ctx.drawImage(assets[this.type],this.x,this.y,this.size,this.size) }
     }
 
+    // === Game Start ===
     function startGame(){
       const player=new Player();
       const zombies=Array.from({length:5},()=>new Zombie());
-      const items=Array.from({length:8},()=>new Item(['rope','prison','swab','nano'][Math.floor(Math.random()*4)]));
-      const collected={rope:0,prison:0,swab:0,nano:0};
+      const items=Array.from({length:8},()=>new Item(
+        ['rope','prison','swab','nano'][Math.floor(Math.random()*4)]
+      ));
+      const collected={ rope:0, prison:0, swab:0, nano:0 };
 
       function loop(){
+        // 배경
         ctx.drawImage(assets.bg,0,0,WIDTH,HEIGHT);
+
+        // 업데이트
         player.update(); zombies.forEach(z=>z.update(player));
 
+        // 아이템 충돌 & 리스폰
         items.forEach(it=>{
           if(isColliding(player,it)){
             collected[it.type]++;
@@ -280,6 +294,7 @@
           }
         });
 
+        // 좀비 충돌
         zombies.forEach(z=>{
           if(isColliding(player,z)){
             if(player.ropeCount>0){
@@ -294,16 +309,18 @@
           }
         });
 
+        // 그리기
         player.draw(); zombies.forEach(z=>z.draw()); items.forEach(it=>it.draw());
 
+        // HUD 업데이트
         document.getElementById('hud').innerHTML=
-          `❤체력:${player.health}&nbsp;&nbsp;🔗로프:${player.ropeCount}`+
-          `&nbsp;&nbsp;👕나노:${player.nanoCount}`+
-          `&nbsp;&nbsp;📦감옥:${player.imprisoned}`+
-          `&nbsp;&nbsp;⭐점수:${player.score}<br>`+
+          `❤체력:${player.health} 🔗로프:${player.ropeCount}`+
+          ` 👕나노:${player.nanoCount} 📦감옥:${player.imprisoned}`+
+          ` ⭐점수:${player.score}<br>`+
           `획득▶로프:${collected.rope} 감옥:${collected.prison}`+
           ` 면봉:${collected.swab} 나노:${collected.nano}`;
 
+        // 게임오버
         if(player.health<=0){
           alert('게임 오버!\n최종 점수:'+player.score);
           window.location.reload();
