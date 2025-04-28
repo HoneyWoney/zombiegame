@@ -28,7 +28,7 @@
       display:none;
     }
 
-    /* ── 인트로 화면 ── */
+    /* ── 1) 인트로 화면 ── */
     #introScreen {
       display:flex;
       flex-direction:column;
@@ -44,7 +44,7 @@
       margin-top:20px;
     }
 
-    /* ── 정보 화면 ── */
+    /* ── 2) 정보 화면 ── */
     #infoScreen {
       display:flex;
       flex-direction:column;
@@ -61,7 +61,7 @@
     }
     #infoScreen h2 { margin-top:0; }
 
-    /* ── 게임 화면 ── */
+    /* ── 3) 게임 화면 ── */
     #gameScreen {
       display:flex;
       flex-direction:column;
@@ -116,57 +116,52 @@
 
   <script>
   (()=>{
-
-    // ── 화면 전환 & BGM 제어 ──
+    // ── 배경음악 & 효과음 로드 ──
     const introAudio = new Audio('intro.wav');
     introAudio.loop = true;
+    introAudio.volume = 0.5;   // 볼륨 절반
     const gameAudio  = new Audio('game.wav');
-    gameAudio.loop = true;
+    gameAudio.loop  = true;
+    gameAudio.volume  = 0.5;   // 볼륨 절반
     const sfxItem    = new Audio('pickup.wav');
     const sfxCapture = new Audio('capture.wav');
 
+    // ── 화면 전환 & BGM 제어 ──
     const show = id => {
       document.querySelectorAll('.screen').forEach(s=>s.style.display='none');
       document.getElementById(id).style.display = 'flex';
-
-      if(id === 'gameScreen'){
+      if(id==='gameScreen'){
         introAudio.pause();
-        gameAudio.currentTime = 0;
-        gameAudio.play();
+        gameAudio.currentTime=0; gameAudio.play();
       } else {
         gameAudio.pause();
-        introAudio.currentTime = 0;
-        introAudio.play();
+        introAudio.currentTime=0; introAudio.play();
       }
     };
 
-    // 모바일 가로 강제
-    const isMobile = () => /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+    // 모바일 가로모드 강제
+    const isMobile = ()=>/Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
 
     document.getElementById('btnStart').onclick = ()=>{
-      if(isMobile() && window.innerWidth < window.innerHeight){
+      if(isMobile() && window.innerWidth<window.innerHeight){
         alert('모바일에서는 가로 모드로 전환 후 게임이 시작됩니다.');
         window.addEventListener('orientationchange', function onrot(){
-          if(window.innerWidth > window.innerHeight){
+          if(window.innerWidth>window.innerHeight){
             window.removeEventListener('orientationchange', onrot);
-            show('gameScreen');
-            startGame();
+            show('gameScreen'); startGame();
           }
         });
       } else {
-        show('gameScreen');
-        startGame();
+        show('gameScreen'); startGame();
       }
     };
-    document.getElementById('btnInfo').onclick  = ()=> show('infoScreen');
-    document.getElementById('btnBack').onclick  = ()=> show('introScreen');
+    document.getElementById('btnInfo').onclick = ()=> show('infoScreen');
+    document.getElementById('btnBack').onclick = ()=> show('introScreen');
 
-    // 처음 인트로
+    // 첫 화면 인트로
     show('introScreen');
 
-
     // ── 게임 로직 ──
-
     const canvas = document.getElementById('gameCanvas'),
           ctx    = canvas.getContext('2d');
     let WIDTH, HEIGHT;
@@ -178,23 +173,20 @@
     resize();
 
     const FPS = 60;
-    const keys = {}, ptr = {down:false,x:0,y:0};
-    window.addEventListener('keydown', e=> keys[e.key]=true);
-    window.addEventListener('keyup',   e=> keys[e.key]=false);
+    const keys = {}, ptr={down:false,x:0,y:0};
+    window.addEventListener('keydown', e=>keys[e.key]=true);
+    window.addEventListener('keyup',   e=>keys[e.key]=false);
 
-    canvas.addEventListener('mousedown',e=>{ ptr.down=true; upd(e); });
-    canvas.addEventListener('mousemove',e=>{ if(ptr.down) upd(e); });
-    window.addEventListener('mouseup',  ()=> ptr.down=false);
-    canvas.addEventListener('touchstart',e=>{ ptr.down=true; upd(e.touches[0]); });
-    canvas.addEventListener('touchmove', e=> upd(e.touches[0]));
-    canvas.addEventListener('touchend',  ()=> ptr.down=false);
-    function upd(e){ ptr.x = e.clientX; ptr.y = e.clientY; }
+    canvas.addEventListener('mousedown',e=>{ptr.down=true; upd(e);});
+    canvas.addEventListener('mousemove',e=>{if(ptr.down) upd(e);});
+    window.addEventListener('mouseup', ()=>ptr.down=false);
+    canvas.addEventListener('touchstart',e=>{ptr.down=true; upd(e.touches[0]);});
+    canvas.addEventListener('touchmove', e=>upd(e.touches[0]));
+    canvas.addEventListener('touchend', ()=>ptr.down=false);
+    function upd(e){ ptr.x=e.clientX; ptr.y=e.clientY; }
 
     function isColliding(a,b){
-      return !(a.x+a.size < b.x ||
-               a.x     > b.x+b.size ||
-               a.y+a.size < b.y ||
-               a.y     > b.y+b.size);
+      return !(a.x+a.size<b.x||a.x>b.x+b.size||a.y+a.size<b.y||a.y>b.y+b.size);
     }
 
     // 이미지 로드
@@ -202,20 +194,17 @@
       bg:'bg.png', player:'player.png', zombie:'zombie.png',
       rope:'rope.png', prison:'prison.png', swab:'swab.png', nano:'nano.png'
     };
-    const assets = {};
-    let ld=0, tot=Object.keys(list).length;
+    const assets={}; let ld=0, tot=Object.keys(list).length;
     for(let k in list){
-      assets[k] = new Image();
-      assets[k].src = list[k];
-      assets[k].onload = ()=>{ ld++; }
+      assets[k]=new Image(); assets[k].src=list[k];
+      assets[k].onload=()=>ld++;
     }
 
-    const SPR = { player:60, zombie:50, item:36 };
+    const SPR={player:60,zombie:50,item:36};
 
-    class Player {
+    class Player{
       constructor(){
-        this.size = SPR.player;
-        this.x = WIDTH/2; this.y = HEIGHT/2;
+        this.size=SPR.player; this.x=WIDTH/2; this.y=HEIGHT/2;
         this.speed=4; this.health=2;
         this.ropeCount=0; this.nanoCount=0;
         this.captured=0; this.imprisoned=0; this.score=0;
@@ -227,8 +216,7 @@
         if(keys['ArrowUp']||keys['w']) this.y-=this.speed;
         if(keys['ArrowDown']||keys['s']) this.y+=this.speed;
         if(ptr.down){
-          const dx=ptr.x-this.x, dy=ptr.y-this.y;
-          const d=Math.hypot(dx,dy)||1;
+          const dx=ptr.x-this.x, dy=ptr.y-this.y, d=Math.hypot(dx,dy)||1;
           this.x+=dx/d*this.speed; this.y+=dy/d*this.speed;
         }
         this.x=Math.max(0,Math.min(WIDTH-this.size,this.x));
@@ -241,7 +229,7 @@
       }
     }
 
-    class Zombie {
+    class Zombie{
       constructor(){ this.size=SPR.zombie; this.speed=1.2; this.reset(); }
       reset(){
         this.x=Math.random()*(WIDTH-this.size);
@@ -252,15 +240,14 @@
         this.x+=dx/d*this.speed; this.y+=dy/d*this.speed;
       }
       draw(){
-        // 좀 더 빨갛게 보이도록 캔버스 필터
         ctx.save();
-        ctx.filter = 'hue-rotate(-15deg) saturate(200%) brightness(120%)';
+        ctx.filter='hue-rotate(-15deg) saturate(200%) brightness(120%)';
         ctx.drawImage(assets.zombie,this.x,this.y,this.size,this.size);
         ctx.restore();
       }
     }
 
-    class Item {
+    class Item{
       constructor(t){ this.type=t; this.size=SPR.item; this.reset(); }
       reset(){
         this.x=Math.random()*(WIDTH-this.size);
@@ -275,20 +262,16 @@
       const items=Array.from({length:8},()=>new Item(
         ['rope','prison','swab','nano'][Math.floor(Math.random()*4)]
       ));
-      const collected={ rope:0, prison:0, swab:0, nano:0 };
+      const collected={rope:0,prison:0,swab:0,nano:0};
 
       function loop(){
-        // 배경
         ctx.drawImage(assets.bg,0,0,WIDTH,HEIGHT);
-
-        // 업데이트
         player.update(); zombies.forEach(z=>z.update(player));
 
-        // 아이템 충돌
         items.forEach(it=>{
           if(isColliding(player,it)){
             collected[it.type]++;
-            sfxItem.currentTime = 0; sfxItem.play();
+            sfxItem.currentTime=0; sfxItem.play();
             switch(it.type){
               case 'rope': player.ropeCount++; break;
               case 'prison':
@@ -303,12 +286,11 @@
           }
         });
 
-        // 좀비 충돌
         zombies.forEach(z=>{
           if(isColliding(player,z)){
             if(player.ropeCount>0){
               player.ropeCount--; player.captured++;
-              sfxCapture.currentTime = 0; sfxCapture.play();
+              sfxCapture.currentTime=0; sfxCapture.play();
               z.reset();
             }
             else if(player.nanoCount>0){
@@ -320,12 +302,8 @@
           }
         });
 
-        // 그리기
-        player.draw();
-        zombies.forEach(z=>z.draw());
-        items.forEach(it=>it.draw());
+        player.draw(); zombies.forEach(z=>z.draw()); items.forEach(it=>it.draw());
 
-        // HUD
         document.getElementById('hud').innerHTML=
           `❤체력:${player.health} 🔗로프:${player.ropeCount}`+
           ` 👕나노:${player.nanoCount} 📦감옥:${player.imprisoned}`+
@@ -333,13 +311,10 @@
           `획득▶로프:${collected.rope} 감옥:${collected.prison}`+
           ` 면봉:${collected.swab} 나노:${collected.nano}`;
 
-        // 게임 오버
         if(player.health<=0){
           alert('게임 오버!\n최종 점수:'+player.score);
-          window.location.reload();
-          return;
+          window.location.reload(); return;
         }
-
         requestAnimationFrame(loop);
       }
       loop();
