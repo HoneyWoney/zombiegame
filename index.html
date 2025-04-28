@@ -2,28 +2,38 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
-  <title>Zombie Game (Keyboard, Mouse & Mobile Controls)</title>
+  <title>Zombie Game (Responsive for Mobile Landscape)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
     body { margin:0; overflow:hidden; background:#000; }
-    #gameCanvas { display:block; margin:0 auto; background:#111; touch-action: none; }
+    #gameCanvas { display:block; touch-action:none; }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <canvas id="gameCanvas"></canvas>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const WIDTH = canvas.width, HEIGHT = canvas.height, FPS = 60;
-    // 입력 상태
+    // 화면 크기 동적 설정
+    let WIDTH, HEIGHT;
+    function resizeCanvas() {
+      // 모바일 가로 모드 시 전체 뷰포트 사용
+      WIDTH = window.innerWidth;
+      HEIGHT = window.innerHeight;
+      canvas.width = WIDTH;
+      canvas.height = HEIGHT;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const FPS = 60;
     const keys = {};
     let pointerActive = false;
     let pointerX = 0, pointerY = 0;
-    
-    // 키보드 이벤트
+
+    // 입력 이벤트
     window.addEventListener('keydown', e => { keys[e.key] = true; });
-    window.addEventListener('keyup', e => { keys[e.key] = false; });
-    
-    // 포인터 이벤트 (마우스 & 터치)
+    window.addEventListener('keyup',   e => { keys[e.key] = false; });
     canvas.addEventListener('pointerdown', e => {
       pointerActive = true;
       const rect = canvas.getBoundingClientRect();
@@ -37,28 +47,24 @@
         pointerY = e.clientY - rect.top;
       }
     });
-    canvas.addEventListener('pointerup', () => {
-      pointerActive = false;
-    });
-    canvas.addEventListener('pointerleave', () => {
-      pointerActive = false;
-    });
+    canvas.addEventListener('pointerup',   () => { pointerActive = false; });
+    canvas.addEventListener('pointerleave',() => { pointerActive = false; });
 
-    // 이미지 로드
+    // 자산 로드
     const assetPaths = { bg:'bg.png', player:'player.png', zombie:'zombie.png', rope:'rope.png', prison:'prison.png', swab:'swab.png', nano:'nano.png' };
     const assets = {};
-    let loaded = 0, total = Object.keys(assetPaths).length;
+    let loaded = 0;
     const SPRITE = { player:40, zombie:30, rope:36, prison:36, swab:36, nano:36 };
     for (let key in assetPaths) {
       const img = new Image();
       img.src = assetPaths[key];
-      img.onload = () => { if (++loaded === total) startGame(); };
+      img.onload = () => { if (++loaded === Object.keys(assetPaths).length) startGame(); };
       assets[key] = img;
     }
 
     // 충돌 검사
     function isColliding(a,b) {
-      return !(a.x+a.size < b.x || a.x > b.x+b.size || a.y+a.size < b.y || a.y > b.y+b.size);
+      return !(a.x + a.size < b.x || a.x > b.x + b.size || a.y + a.size < b.y || a.y > b.y + b.size);
     }
 
     // 플레이어
@@ -78,12 +84,10 @@
       }
       update() {
         let dx = 0, dy = 0;
-        // 키보드 이동
         if (keys['ArrowLeft']||keys['a']) dx -= this.speed;
         if (keys['ArrowRight']||keys['d']) dx += this.speed;
-        if (keys['ArrowUp']||keys['w']) dy -= this.speed;
-        if (keys['ArrowDown']||keys['s']) dy += this.speed;
-        // 포인터 이동
+        if (keys['ArrowUp']   ||keys['w']) dy -= this.speed;
+        if (keys['ArrowDown'] ||keys['s']) dy += this.speed;
         if (pointerActive) {
           const centerX = this.x + this.size/2;
           const centerY = this.y + this.size/2;
@@ -95,13 +99,11 @@
         }
         this.x += dx;
         this.y += dy;
-        // 경계 내 제한
         this.x = Math.max(0, Math.min(WIDTH - this.size, this.x));
         this.y = Math.max(0, Math.min(HEIGHT - this.size, this.y));
         if (this.invincibleTimer > 0) this.invincibleTimer--;
       }
       draw() {
-        // 깜빡임 무적
         if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer/15) % 2 === 0) return;
         ctx.drawImage(assets.player, this.x, this.y, this.size, this.size);
       }
@@ -110,11 +112,7 @@
     // 좀비
     class Zombie {
       constructor() { this.size = SPRITE.zombie; this.reset(); }
-      reset() {
-        this.x = Math.random()*(WIDTH-this.size);
-        this.y = Math.random()*(HEIGHT-this.size);
-        this.speed = 1.5;
-      }
+      reset() { this.x = Math.random()*(WIDTH-this.size); this.y = Math.random()*(HEIGHT-this.size); this.speed=1.5; }
       update(player) {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
@@ -122,7 +120,7 @@
         this.x += this.speed * dx/dist;
         this.y += this.speed * dy/dist;
       }
-      draw() { ctx.drawImage(assets.zombie,this.x,this.y,this.size,this.size); }
+      draw() { ctx.drawImage(assets.zombie, this.x, this.y, this.size, this.size); }
     }
 
     // 아이템
@@ -131,7 +129,7 @@
       reset() { this.x=Math.random()*(WIDTH-this.size); this.y=Math.random()*(HEIGHT-this.size); }
       draw() {
         if (this.type==='rope') ctx.filter='brightness(1.3)';
-        ctx.drawImage(assets[this.type],this.x,this.y,this.size,this.size);
+        ctx.drawImage(assets[this.type], this.x, this.y, this.size, this.size);
         ctx.filter='none';
       }
     }
@@ -141,52 +139,30 @@
       const player = new Player();
       const zombies = Array.from({length:5},()=>new Zombie());
       let items = Array.from({length:8},()=>new Item(randomType()));
-      const collected = {rope:0,prison:0,swab:0,nano:0};
+      const collected = {rope:0, prison:0, swab:0, nano:0};
       function loop() {
-        // 배경
-        ctx.drawImage(assets.bg,0,0,WIDTH,HEIGHT);
-        // 업데이트
-        player.update();
-        zombies.forEach(z=>z.update(player));
-        // 아이템 충돌 및 리스폰
-        items = items.map(it=>{
-          if(isColliding(player,it)){
-            collected[it.type]++;
-            applyItem(it.type,player);
-            return new Item(randomType());
-          }
-          return it;
-        });
-        // 좀비 충돌 및 처리
-        for(let z of zombies) {
-          if(isColliding(player,z)) {
-            if(player.ropeCount>0) {
-              player.ropeCount--; player.captured++; z.reset(); player.invincibleTimer=3*FPS;
-            } else if(player.nanoCount>0) {
-              player.nanoCount--; player.invincibleTimer=3*FPS;
-            } else if(player.invincibleTimer===0) {
-              player.health--; z.reset(); if(player.health<=0) return gameOver(player.score); player.invincibleTimer=3*FPS;
-            }
+        ctx.drawImage(assets.bg, 0, 0, WIDTH, HEIGHT);
+        player.update(); zombies.forEach(z=>z.update(player));
+        items = items.map(it => isColliding(player,it) ? (collected[it.type]++, applyItem(it.type,player), new Item(randomType())) : it);
+        for (let z of zombies) {
+          if (isColliding(player,z)) {
+            if (player.ropeCount>0) { player.ropeCount--; player.captured++; z.reset(); player.invincibleTimer=3*FPS; }
+            else if (player.nanoCount>0) { player.nanoCount--; player.invincibleTimer=3*FPS; }
+            else if (player.invincibleTimer===0) { player.health--; z.reset(); if(player.health<=0) return gameOver(); player.invincibleTimer=3*FPS; }
             break;
           }
         }
-        // 그리기
         player.draw(); zombies.forEach(z=>z.draw()); items.forEach(it=>it.draw());
-        // HUD
         ctx.fillStyle='#fff'; ctx.font='16px monospace';
-        ctx.fillText(
-          `체력:${player.health} 로프:${player.ropeCount} 나노옷:${player.nanoCount} 포획:${player.captured} 감옥:${player.imprisoned} 점수:${player.score}`,
-          10,20);
-        ctx.fillText(
-          `획득→ 로프:${collected.rope} 감옥:${collected.prison} 면봉:${collected.swab} 나노:${collected.nano}`,
-          10,40);
+        ctx.fillText(`체력:${player.health} 로프:${player.ropeCount} 나노:${player.nanoCount} 포획:${player.captured} 감옥:${player.imprisoned} 점수:${player.score}`,10,20);
+        ctx.fillText(`획득→ 로프:${collected.rope} 감옥:${collected.prison} 면봉:${collected.swab} 나노:${collected.nano}`,10,40);
         requestAnimationFrame(loop);
       }
       loop();
     }
-    function applyItem(type,player){ if(type==='rope')player.ropeCount++; else if(type==='prison'&&player.captured>0){player.imprisoned++;player.captured--;} else if(type==='swab'&&player.imprisoned>0){player.score++;player.imprisoned--;} else if(type==='nano'){player.nanoCount++;}}    
+    function applyItem(type,player){ if(type==='rope')player.ropeCount++; else if(type==='prison'&&player.captured>0){player.imprisoned++;player.captured--;} else if(type==='swab'&&player.imprisoned>0){player.score++;player.imprisoned--;} else if(type==='nano')player.nanoCount++; }
     function randomType(){ return ['rope','prison','swab','nano'][Math.floor(Math.random()*4)]; }
-    function gameOver(score){ alert(`게임 오버!\n최종 점수: ${score}`); window.location.reload(); }
+    function gameOver(){ alert(`게임 오버!\n최종 점수: ${player.score||0}`); location.reload(); }
   </script>
 </body>
 </html>
